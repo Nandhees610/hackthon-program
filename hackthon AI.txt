@@ -1,0 +1,36 @@
+from typing import List
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
+import re
+
+def simple_rag(documents: List[str], query: str) -> str:
+    """
+    Given a list of document texts and a query:
+    1. Find the document most similar to the query using TF-IDF & cosine similarity.
+    2. Split that document into sentences and return the sentence most similar to the query.
+    """
+    if not documents:
+        return "No documents provided."
+
+    # Step 1: Vectorize the whole documents + query
+    vectorizer = TfidfVectorizer(stop_words='english')
+    doc_vectors = vectorizer.fit_transform(documents)
+    query_vector = vectorizer.transform([query])
+
+    # Compute similarities and pick the most similar document
+    sims = cosine_similarity(query_vector, doc_vectors)[0]
+    best_doc_idx = int(np.argmax(sims))
+    best_doc = documents[best_doc_idx]
+
+    # Step 2: Sentence-level scoring
+    sentences = re.split(r'(?<=[.!?]) +', best_doc)
+    if not sentences:
+        return "No sentences found in the best matching document."
+
+    sent_vecs = vectorizer.transform(sentences)
+    sent_sims = cosine_similarity(query_vector, sent_vecs)[0]
+    best_sent_idx = int(np.argmax(sent_sims))
+    best_sentence = sentences[best_sent_idx]
+
+    return best_sentence
